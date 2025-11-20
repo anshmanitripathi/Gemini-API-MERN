@@ -15,7 +15,6 @@ const PORT = process.env.PORT || 5000;
 //CONFIGURATION
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/ai-chatbot";
 const GEN_AI_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = "gemini-1.5-flash"; 
 
 if (!GEN_AI_KEY) {
   console.error("CRITICAL ERROR: GEMINI_API_KEY is missing in .env file");
@@ -24,6 +23,11 @@ if (!GEN_AI_KEY) {
 
 app.use(cors());
 app.use(express.json());
+
+// HEALTH CHECK ROUTE
+app.get('/', (req, res) => {
+  res.send('API is running successfully!');
+});
 
 //MONGODB SETUP
 mongoose.connect(MONGO_URI)
@@ -44,34 +48,48 @@ const MessageSchema = new mongoose.Schema({
 const Chat = mongoose.model('Chat', ChatSchema);
 const Message = mongoose.model('Message', MessageSchema);
 
-
+//AI SETUp
 const ai = new GoogleGenAI({ apiKey: GEN_AI_KEY });
 
+const MODELS_TO_TRY = [
+  "gemini-2.5-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gemini-pro"
+];
 
 async function generateContent(prompt) {
-  try {
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-    });
+  let lastError = null;
+  
+  for (const modelName of MODELS_TO_TRY) {
+    try {
+      console.log(`Trying model: ${modelName}...`);
+      
+      // NEW SDK SYNTAX
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt, // The new SDK accepts simple strings here
+      });
 
-    
-    if (response.text) {
-      return response.text;
-    } else if (response.response && response.response.text) {
-        return typeof response.response.text === 'function' 
-          ? response.response.text() 
-          : response.response.text;
-    } else {
-        throw new Error("Received empty response from AI");
+      // Handle the response object from the new SDK
+      if (response && response.text) {
+        return response.text;
+      } else if (response && typeof response.text === 'function') {
+        return response.text();
+      } else {
+         throw new Error("Empty response from AI");
+      }
+      
+    } catch (error) {
+      console.warn(`Model '${modelName}' failed. Trying next...`);
+      lastError = error;
     }
-  } catch (error) {
-    console.error(`AI Generation failed using model '${MODEL_NAME}':`, error);
-    throw new Error(`AI Error: ${error.message}`);
   }
+  
+  throw new Error(`All AI models failed. Last error: ${lastError?.message}`);
 }
 
-//ROUTES
+// --- ROUTES ---
 
 app.get('/api/chats/:userId', async (req, res) => {
   try {
@@ -103,7 +121,7 @@ app.delete('/api/chats/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-
+// MESSAGE ENDPOINT
 app.post('/api/message', upload.single('pdf'), async (req, res) => {
   const { chatId, content, userId } = req.body;
   
@@ -129,6 +147,7 @@ app.post('/api/message', upload.single('pdf'), async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
 
+    // Use the new generator function
     const aiText = await generateContent(prompt);
 
     const aiMsg = new Message({ chatId: finalChatId, role: 'model', content: aiText });
@@ -137,7 +156,7 @@ app.post('/api/message', upload.single('pdf'), async (req, res) => {
     res.json({ chatId: finalChatId, userMessage: userMsg, aiMessage: aiMsg });
 
   } catch (err) {
-    console.error("Processing Error:", err.message);
+    console.error("Processing Error:", err);
     res.status(500).json({ 
       error: "Server Error: " + (err.message || "Unknown error")
     });
