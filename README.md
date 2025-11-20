@@ -20,11 +20,13 @@ Google GenAI SDK (Gemini 2.5 / 1.5 / Pro fallback)
 
 ### Quick Setup
 #### Clone Repository
-git clone https://github.com/your-username/nexus-ai-chatbot.git
-cd nexus-ai-chatbot
+git clone https://github.com/anshmanitripathi/MY-AI-by-AMT
+
+cd MY-AI-by-AMT
 
 #### Backend Setup
 cd backend
+
 npm install
 
 Create .env file
