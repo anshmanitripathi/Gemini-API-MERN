@@ -1,6 +1,6 @@
 // src/constants.js
 
-export const API_URL = "http://localhost:5000/api"; 
+export const API_URL = "https://gemini-api-mern.onrender.com/api"; 
 
 export const COLORS = {
   bgMain: '#F3E8DF',      // Light Cream
