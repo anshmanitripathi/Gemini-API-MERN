@@ -198,7 +198,7 @@ export default function App() {
             )}
 
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center opacity-1 animate-in fade-in duration-1000 pb-20">
+              <div className="h-full flex flex-col items-center justify-center text-center opacity-100 animate-in fade-in duration-1000 pb-20">
                  <div className="w-20 h-20 bg-[#452829] rounded-[2rem] flex items-center justify-center shadow-2xl shadow-[#452829]/20 mb-8 rotate-3">
                    <Bot size={32} className="text-[#F3E8DF]" />
                  </div>
